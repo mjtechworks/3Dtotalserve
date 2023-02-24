@@ -1,5 +1,6 @@
-import { loadWall } from "./components/intor/wall.js";
-import { loadModel } from "./components/intor/object3D.js";
+import { loadWall } from "./components/intor/modelBase.js";
+import { loadModel } from "./components/intor/modelObject.js";
+import { loadTextModel } from "./components/intor/textObject.js";
 import { createCamera } from "./components/camera.js";
 import { createLights } from "./components/lights.js";
 import { createScene } from "./components/scene.js";
@@ -15,14 +16,13 @@ import * as THREE from "three";
 
 let camera;
 let controls;
-
 let transcontrols;
 let renderer;
 let scene;
 let loop;
-// let helper;
+let helper;
 let objects;
-
+let rect;
 // let pointer;
 
 class World {
@@ -30,31 +30,43 @@ class World {
     camera = createCamera();
     renderer = createRenderer();
     scene = createScene();
-    // helper = createHelper();
     loop = new Loop(camera, scene, renderer);
     container.append(renderer.domElement);
+    // renderer.domElement.style.borderRadius = "10px";
 
+    // container.parentNode.style.borderRadius = "10px";
+    //add light
     const light = createLights();
-
     scene.add(light);
-
-    // scene.add(helper);
-
-    const resizer = new Resizer(container, camera, renderer);
+    //add helper
+    helper = createHelper();
+    scene.add(helper);
+    new Resizer(container, camera, renderer);
   }
 
   async init() {
     let object_id;
     let control_state;
+    let model_object;
     let model_objects = new THREE.Group();
-    let currentObject;
+    let current_object;
+
+    let rect = renderer.domElement.getBoundingClientRect();
+    const resize_ob = new ResizeObserver(function (entries) {
+      rect = renderer.domElement.getBoundingClientRect();
+    });
+    resize_ob.observe(document.querySelector("#scene-container"));
 
     controls = createControls(camera, renderer.domElement);
     loop.updatables.push(controls);
 
     setControlState("init");
 
-    transcontrols = createTransControls(camera, renderer.domElement);
+    transcontrols = createTransControls(
+      camera,
+      renderer.domElement,
+      control_state
+    );
     const model = await loadWall();
 
     for (
@@ -66,43 +78,13 @@ class World {
         .getElementsByClassName("img-item")
         [i].addEventListener("click", add_model, false);
     }
-    // let model_object;
-
-    let model_object;
-    function setControlState(state) {
-      control_state = state;
-      if (state == "init") {
-        document.getElementById("tool-button").style.visibility = "hidden";
-      } else if (state == "set") {
-        document.getElementById("tool-button").style.visibility = "visible";
-      }
-    }
-
-    function changeModel_object_state(model_object, state) {
-      if (!state) {
-        model_object.traverse(function (object) {
-          if (object.type == "Mesh") {
-            object.material.transparent = true;
-            object.material.opacity = 0.5;
-          }
-        });
-      } else {
-        model_object.traverse(function (object) {
-          if (object.type == "Mesh") {
-            object.material.transparent = false;
-            object.material.opacity = 1;
-          }
-        });
-      }
-    }
 
     async function add_model() {
       if (control_state == "init") {
         setControlState("add");
-        control_state = "add";
+        // control_state = "add";
         object_id = this.getAttribute("id");
-        // console.log(this);
-        this.getElementsByTagName("img")[0].style.border = "2px solid #aaaaaa";
+        this.getElementsByTagName("img")[0].style.border = "2px solid #f9f6ff";
         model_object = await loadModel(object_id);
 
         changeModel_object_state(model_object, false);
@@ -127,8 +109,68 @@ class World {
       }
     }
 
+    document
+      .getElementById("textAddBtn")
+      .addEventListener("click", () => add_text());
+
+    async function add_text() {
+      if (control_state == "init") {
+        setControlState("add");
+        // control_state = "add";
+        model_object = await loadTextModel(
+          document.getElementById("textContent").value,
+          document.getElementById("textSize").value,
+          document.getElementById("textColor").value
+        );
+
+        changeModel_object_state(model_object, false);
+        model_object.position.set(0, 10000, 0);
+
+        scene.add(model_object);
+        // get_model_object(object_id);
+      }
+    }
+
+    function setControlState(state) {
+      control_state = state;
+      if (state == "init") {
+        document.getElementById("tool-button").style.visibility = "hidden";
+        for (
+          var i = 0;
+          i < document.getElementsByClassName("img-item").length;
+          i++
+        ) {
+          document
+            .getElementsByClassName("img-item")
+            [i].getElementsByTagName("img")[0].style.border =
+            "2px solid #ffffff";
+        }
+      } else if (state == "set") {
+        document.getElementById("tool-button").style.visibility = "visible";
+      }
+    }
+
+    function changeModel_object_state(model_object, state) {
+      if (!state) {
+        model_object.traverse(function (object) {
+          if (object.type == "Mesh") {
+            object.material.emissive.setHex(0x222222);
+            // object.material.opacity = 0.7;
+          }
+        });
+      } else {
+        model_object.traverse(function (object) {
+          if (object.type == "Mesh") {
+            object.material.emissive.setHex(0x000000);
+            // object.material.transparent = false;
+            // object.material.opacity = 1;
+          }
+        });
+      }
+    }
+
     objects = [];
-    objects.push(model.children[4]);
+    objects.push(model.children[0]);
     document.addEventListener("pointermove", onPointerMove);
     document.addEventListener("pointerdown", onPointerDown);
     function onPointerMove(event) {
@@ -136,18 +178,11 @@ class World {
         let raycaster = new THREE.Raycaster();
         let pointer = new THREE.Vector2();
         pointer.set(
-          (event.clientX /
-            document.getElementById("scene-container").offsetWidth) *
-            2 -
+          ((event.clientX - rect.left) / renderer.domElement.offsetWidth) * 2 -
             1,
-          -(
-            event.clientY /
-            document.getElementById("scene-container").offsetHeight
-          ) *
-            2 +
+          -((event.clientY - rect.top) / renderer.domElement.offsetHeight) * 2 +
             1
         );
-
         raycaster.setFromCamera(pointer, camera);
 
         const intersects = raycaster.intersectObjects(objects, false);
@@ -163,15 +198,9 @@ class World {
         let raycaster = new THREE.Raycaster();
         let pointer = new THREE.Vector2();
         pointer.set(
-          (event.clientX /
-            document.getElementById("scene-container").offsetWidth) *
-            2 -
+          ((event.clientX - rect.left) / renderer.domElement.offsetWidth) * 2 -
             1,
-          -(
-            event.clientY /
-            document.getElementById("scene-container").offsetHeight
-          ) *
-            2 +
+          -((event.clientY - rect.top) / renderer.domElement.offsetHeight) * 2 +
             1
         );
 
@@ -192,15 +221,9 @@ class World {
       if (control_state == "add") {
         let raycaster = new THREE.Raycaster();
         let pointer = new THREE.Vector2(
-          (event.clientX /
-            document.getElementById("scene-container").offsetWidth) *
-            2 -
+          ((event.clientX - rect.left) / renderer.domElement.offsetWidth) * 2 -
             1,
-          -(
-            event.clientY /
-            document.getElementById("scene-container").offsetHeight
-          ) *
-            2 +
+          -((event.clientY - rect.top) / renderer.domElement.offsetHeight) * 2 +
             1
         );
 
@@ -217,7 +240,7 @@ class World {
             model_objects.children[model_objects.children.length - 1]
               .children[0].children[0]
           );
-          currentObject = model_object;
+          current_object = model_object;
 
           scene.add(model_objects);
           setTransform();
@@ -229,26 +252,17 @@ class World {
         let raycaster = new THREE.Raycaster();
         let pointer = new THREE.Vector2();
         pointer.set(
-          (event.clientX /
-            document.getElementById("scene-container").offsetWidth) *
-            2 -
+          ((event.clientX - rect.left) / renderer.domElement.offsetWidth) * 2 -
             1,
-          -(
-            event.clientY /
-            document.getElementById("scene-container").offsetHeight
-          ) *
-            2 +
+          -((event.clientY - rect.top) / renderer.domElement.offsetHeight) * 2 +
             1
         );
-
         raycaster.setFromCamera(pointer, camera);
-
         const intersects = raycaster.intersectObjects(objects, false);
-
         if (intersects.length > 1) {
           const intersect = intersects[0];
           setControlState("set");
-          currentObject = intersect.object.parent.parent;
+          current_object = intersect.object.parent.parent;
           changeModel_object_state(intersect.object.parent.parent, false);
 
           // intersect;
@@ -268,36 +282,42 @@ class World {
       }
     }
     document.getElementById("btn_ok").addEventListener("click", () => {
-      transcontrols.detach();
-      changeModel_object_state(currentObject, true);
-      setControlState("init");
+      check_current_object();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (control_state == "set") {
+        switch (event.which || event.keyCode || event.charCode) {
+          case 46:
+            delete_current_object();
+            break;
+          case 13:
+            check_current_object();
+            break;
+        }
+      }
     });
 
     document.getElementById("btn_del").addEventListener("click", () => {
+      delete_current_object();
+    });
+    function delete_current_object() {
       transcontrols.detach();
 
       const isLargeNumber = (element) =>
-        element == currentObject.children[0].children[0];
+        element == current_object.children[0].children[0];
 
-      console.log(objects.findIndex(isLargeNumber));
       objects.splice(objects.findIndex(isLargeNumber), 1);
 
-      console.log(currentObject.children[0].children[0]);
-
-      // objects.pop(currentObject.parent);
-      console.log(objects);
-
-      model_objects.remove(currentObject);
+      model_objects.remove(current_object);
 
       setControlState("init");
-    });
+    }
 
-    // let raycaster = new THREE.Raycaster();
-    // let pointer = new THREE.Vector2();
-    // function
-
-    // move the target to the center of the front bird
-    // controls.target.copy(parrot.position);
+    function check_current_object() {
+      transcontrols.detach();
+      changeModel_object_state(current_object, true);
+      setControlState("init");
+    }
 
     scene.add(model);
   }

@@ -7,15 +7,12 @@ function createControls(camera, canvas) {
   controls.dampingFactor = 0.05;
 
   controls.screenSpacePanning = false;
-  controls.enablePan = false;
+  controls.enablePan = true;
 
-  controls.minDistance = 3;
-  controls.maxDistance = 5;
+  controls.minDistance = 2;
+  controls.maxDistance = 10;
 
   controls.maxPolarAngle = Math.PI / 2.1;
-  // controls.enabled = false;
-
-  // forward controls.update to our custom .tick method
   controls.tick = () => controls.update();
 
   return controls;
