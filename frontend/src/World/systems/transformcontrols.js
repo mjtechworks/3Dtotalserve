@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 function createTransControls(camera, canvas, state) {
   const control = new TransformControls(camera, canvas);
+  control.setRotationSnap(Math.PI / 12);
   setModeTranslate();
   if (state == "set") {
     window.addEventListener("keydown", function (event) {
@@ -71,20 +72,20 @@ function createTransControls(camera, canvas, state) {
   }
 
   document
-    .getElementById("state_move")
+    .getElementById("btn_stateMove")
     .addEventListener("click", setModeTranslate);
   document
-    .getElementById("state_rotate")
+    .getElementById("btn_stateRotate")
     .addEventListener("click", setModeRotate);
   document
-    .getElementById("state_scale")
+    .getElementById("btn_stateScale")
     .addEventListener("click", setModeScale);
 
   function setModeTranslate() {
-    document.getElementById("state_move").className = "btn btn-primary";
-    document.getElementById("state_rotate").className =
+    document.getElementById("btn_stateMove").className = "btn btn-primary";
+    document.getElementById("btn_stateRotate").className =
       "btn btn-outline-primary";
-    document.getElementById("state_scale").className =
+    document.getElementById("btn_stateScale").className =
       "btn btn-outline-primary";
     control.setMode("translate");
     control.showX = true;
@@ -93,9 +94,10 @@ function createTransControls(camera, canvas, state) {
     // document.getElementById('state_move').
   }
   function setModeRotate() {
-    document.getElementById("state_move").className = "btn btn-outline-primary";
-    document.getElementById("state_rotate").className = "btn btn-primary";
-    document.getElementById("state_scale").className =
+    document.getElementById("btn_stateMove").className =
+      "btn btn-outline-primary";
+    document.getElementById("btn_stateRotate").className = "btn btn-primary";
+    document.getElementById("btn_stateScale").className =
       "btn btn-outline-primary";
     control.setMode("rotate");
     control.showX = true;
@@ -104,10 +106,11 @@ function createTransControls(camera, canvas, state) {
   }
 
   function setModeScale() {
-    document.getElementById("state_move").className = "btn btn-outline-primary";
-    document.getElementById("state_rotate").className =
+    document.getElementById("btn_stateMove").className =
       "btn btn-outline-primary";
-    document.getElementById("state_scale").className = "btn btn-primary";
+    document.getElementById("btn_stateRotate").className =
+      "btn btn-outline-primary";
+    document.getElementById("btn_stateScale").className = "btn btn-primary";
     control.setMode("scale");
     control.showX = true;
     control.showY = true;
